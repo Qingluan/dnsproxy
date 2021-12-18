@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+
+	"github.com/miekg/dns"
 )
 
 type Connection struct {
@@ -63,14 +65,18 @@ func RunProxy(udpListener *net.UDPConn, sendFund func(sendBuf []byte) (reply []b
 			continue
 		}
 
-		go func() {
-			if reply, err := sendFund(buffer[:n]); err != nil {
-				log.Println("[fail]:", err)
-			} else {
-				udpListener.WriteToUDP(reply, cliaddr)
-			}
+		m := new(dns.Msg)
+		if err := m.Unpack(buffer[:n]); err == nil {
+			go func() {
+				if reply, err := sendFund(buffer[:n]); err != nil {
+					log.Println("[fail]:", err)
+				} else {
+					udpListener.WriteToUDP(reply, cliaddr)
+				}
 
-		}()
+			}()
+		}
+
 		// if !found {
 		// 	conn = NewConnection(ServerAddr, cliaddr)
 		// 	if conn == nil {
