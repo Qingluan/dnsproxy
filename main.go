@@ -57,7 +57,12 @@ func setup(hostport string, port int) bool {
 }
 
 // Routine to handle inputs to Proxy port
-func RunProxy(udpListener *net.UDPConn, sendFund func(sendBuf []byte) (reply []byte, err error)) {
+func ClientProxy(listenPort int, sendFund func(sendBuf []byte) (reply []byte, err error)) (err error) {
+	saddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%d", listenPort))
+	udpListener, err := net.ListenUDP("udp", saddr)
+	if err != nil {
+		return err
+	}
 	var buffer [1500]byte
 	for {
 		n, cliaddr, err := ProxyConn.ReadFromUDP(buffer[0:])
@@ -67,6 +72,7 @@ func RunProxy(udpListener *net.UDPConn, sendFund func(sendBuf []byte) (reply []b
 
 		m := new(dns.Msg)
 		if err := m.Unpack(buffer[:n]); err == nil {
+
 			go func() {
 				if reply, err := sendFund(buffer[:n]); err != nil {
 					log.Println("[fail]:", err)
@@ -75,32 +81,16 @@ func RunProxy(udpListener *net.UDPConn, sendFund func(sendBuf []byte) (reply []b
 				}
 
 			}()
+		} else {
+			log.Println("not dns data jump")
 		}
-
-		// if !found {
-		// 	conn = NewConnection(ServerAddr, cliaddr)
-		// 	if conn == nil {
-		// 		dunlock()
-		// 		continue
-		// 	}
-		// 	ClientDict[saddr] = conn
-		// 	dunlock()
-		// 	Vlogf(2, "Created new connection for client %s\n", saddr)
-		// 	// Fire up routine to manage new connection
-		// 	go RunConnection(conn)
-		// } else {
-		// 	Vlogf(5, "Found connection for client %s\n", saddr)
-		// 	dunlock()
-		// }
-		// Relay to server
-		// _, err = conn.ServerConn.Write(buffer[0:n])
-		// if checkreport(1, err) {
-		// 	continue
-		// }
 	}
 }
 
 func main() {
-	setup("baidu.com:80", 53)
-	RunProxy()
+	port := 6053
+	// setup("baidu.com:80", 53)
+	ClientProxy(port, func(sendBuf []byte) (reply []byte, err error) {
+		return
+	})
 }
