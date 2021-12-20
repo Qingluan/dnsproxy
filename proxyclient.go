@@ -25,14 +25,19 @@ func SetLocalDNS(dnsServer string) {
 
 func LocalQueryDNS(query *dns.Msg, localdnsserver ...string) (replyData []byte, err error) {
 	c := new(dns.Client)
+
 	if localdnsserver != nil {
+
+		log.Println("[query "+localdnsserver[0]+"]:", query.Question[0].Name)
 		reply, _, err := c.Exchange(query, localdnsserver[0])
 		if err != nil {
 			log.Println("[query local err]:", err)
 			return nil, err
 		}
+
 		return reply.Pack()
 	} else {
+		log.Println("[query "+DefaultLocalDNS+"]:", query.Question[0].Name)
 		reply, _, err := c.Exchange(query, DefaultLocalDNS)
 		if err != nil {
 			log.Println("[query local err]:", err)
