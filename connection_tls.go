@@ -50,7 +50,7 @@ type Config struct {
 	EBUFLEN    int    `json:"buflen"`
 }
 
-func NewDNSClientServer(port int, server string) {
+func NewDNSClientServer(port int, server string, cmdChan chan string, isLocalHost func(host string) bool) {
 	for {
 		conn, err := UseDefaultTlsConfig(server).WithConn()
 		if err != nil {
@@ -60,11 +60,21 @@ func NewDNSClientServer(port int, server string) {
 				continue
 			}
 		}
-		ClientProxy(port, func(sendBuf []byte) (reply []byte, err error) {
+		ClientProxy(port, cmdChan, isLocalHost, func(sendBuf []byte, otherDNSServer string) (reply []byte, err error) {
 
 			msg := new(dns.Msg)
 			if err := msg.Unpack(sendBuf); err == nil {
 				log.Println("[query]:", msg.Question[0].Name)
+			}
+			if otherDNSServer != "" {
+				conn.Close()
+				conn, err = UseDefaultTlsConfig(otherDNSServer).WithConn()
+				if err != nil {
+					log.Println("[change dns server err]:", err)
+				} else {
+					log.Println("[change dns server]:", otherDNSServer)
+					server = otherDNSServer
+				}
 			}
 
 			_, err = conn.Write(sendBuf)

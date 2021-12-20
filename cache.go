@@ -16,6 +16,12 @@ type Cache struct {
 	// client *net.UDPAddr
 }
 
+func CleanCache() {
+	lock.Lock()
+	defer lock.Unlock()
+	Cachsed = make(map[string]Cache)
+}
+
 func RegistDNS(host string, replyDNS []byte) {
 	if replyDNS == nil || len(replyDNS) == 0 {
 		return
