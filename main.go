@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net"
+
+	"github.com/miekg/dns"
 )
 
 type Connection struct {
@@ -55,22 +56,31 @@ func setup(hostport string, port int) bool {
 }
 
 // Routine to handle inputs to Proxy port
-func RunProxy(udpListener *net.UDPConn, sendFund func(sendBuf []byte) (reply []byte, err error)) {
+// func RunProxy(udpListener *net.UDPConn, sendFund func(sendBuf []byte) (reply []byte, err error)) {
+func RunProxy(sendFund func(sendBuf []byte) (reply []byte, err error)) {
+
 	var buffer [1500]byte
 	for {
-		n, cliaddr, err := ProxyConn.ReadFromUDP(buffer[0:])
+		n, _, err := ProxyConn.ReadFromUDP(buffer[0:])
 		if checkreport(1, err) {
 			continue
 		}
 
-		go func() {
-			if reply, err := sendFund(buffer[:n]); err != nil {
-				log.Println("[fail]:", err)
-			} else {
-				udpListener.WriteToUDP(reply, cliaddr)
-			}
+		m := new(dns.Msg)
+		if err := m.Unpack(buffer[:n]); err != nil {
 
-		}()
+		} else {
+			fmt.Println("paresed:\n", m.String())
+			fmt.Println("------------ end ------------")
+		}
+		// go func() {
+		// 	if reply, err := sendFund(buffer[:n]); err != nil {
+		// 		log.Println("[fail]:", err)
+		// 	} else {
+		// 		udpListener.WriteToUDP(reply, cliaddr)
+		// 	}
+
+		// }()
 		// if !found {
 		// 	conn = NewConnection(ServerAddr, cliaddr)
 		// 	if conn == nil {
@@ -96,5 +106,5 @@ func RunProxy(udpListener *net.UDPConn, sendFund func(sendBuf []byte) (reply []b
 
 func main() {
 	setup("baidu.com:80", 53)
-	RunProxy()
+	RunProxy(nil)
 }
