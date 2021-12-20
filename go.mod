@@ -1,4 +1,4 @@
-module github.com/Qingluan/proxydns
+module github.com/Qingluan/dnsproxy
 
 go 1.17
 

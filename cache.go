@@ -1,4 +1,4 @@
-package proxydns
+package dnsproxy
 
 import (
 	"sync"
