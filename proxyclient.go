@@ -32,8 +32,13 @@ func ClientProxy(listenPort int, sendFund func(sendBuf []byte) (reply []byte, er
 				log.Printf("query (%d) : %s \n", len(m.Question), m.Question[0].Name)
 				// m.Question[0].Name
 				if reply, found := FindCache(m.Question[0].Name); found {
+					replyMsg := new(dns.Msg)
 
-					udpListener.WriteToUDP(reply.data, clientAddr)
+					replyMsg.Unpack(reply.data)
+					replyMsg.Id = m.Id
+
+					data, _ := replyMsg.Pack()
+					udpListener.WriteToUDP(data, clientAddr)
 				} else {
 					go func(host string, senddata []byte, clientAddr *net.UDPAddr) {
 						replyData, err := sendFund(senddata)
