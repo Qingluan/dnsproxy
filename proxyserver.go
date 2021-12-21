@@ -2,7 +2,6 @@ package dnsproxy
 
 import (
 	"log"
-	"net"
 
 	"github.com/miekg/dns"
 )
@@ -15,10 +14,10 @@ func ServerParseDNS(buffer []byte, replyFunc func(replyData []byte) error) (err 
 		return
 	}
 	c := new(dns.Client)
-	config, _ := dns.ClientConfigFromFile("/etc/resolv.conf")
-	replyMsg, _, err := c.Exchange(queryMsg, net.JoinHostPort(config.Servers[0], config.Port))
+	// config, _ := dns.ClientConfigFromFile("/etc/resolv.conf")
+	replyMsg, _, err := c.Exchange(queryMsg, "8.8.8.8:53")
 	if err != nil {
-		log.Println("resolve from "+net.JoinHostPort(config.Servers[0], config.Port), " err:", err)
+		log.Println("resolve from "+"8.8.8.8:53", " err:", err)
 		return
 	}
 	replyData, err := replyMsg.Pack()
