@@ -58,7 +58,6 @@ func ClientProxy(listenPort int, cmdChan chan string, isLocalHost func(host stri
 	if err != nil {
 		return err
 	}
-	var buffer [1500]byte
 	for {
 		otherDNS := ""
 	label:
@@ -73,36 +72,49 @@ func ClientProxy(listenPort int, cmdChan chan string, isLocalHost func(host stri
 				otherDNS = cmdMsg
 			}
 		default:
+
+			var buffer [1500]byte
 			n, clientAddr, err := udpListener.ReadFromUDP(buffer[0:])
 			if checkreport(1, err) {
 				continue
 			}
+			go func(dnsData []byte, clientAddr *net.UDPAddr) {
+				m := new(dns.Msg)
+				if err := m.Unpack(buffer[:n]); err == nil {
+					if len(m.Question) > 0 {
+						if reply, found := FindCache(m.Question[0].Name); found {
+							replyMsg := new(dns.Msg)
 
-			m := new(dns.Msg)
-			if err := m.Unpack(buffer[:n]); err == nil {
-				if len(m.Question) > 0 {
-					log.Printf("query (%d) : %s \n", len(m.Question), m.Question[0].Name)
-					// m.Question[0].Name
-					if reply, found := FindCache(m.Question[0].Name); found {
-						replyMsg := new(dns.Msg)
+							replyMsg.Unpack(reply.data)
+							replyMsg.Id = m.Id
+							if len(replyMsg.Answer) > 0 {
+								log.Printf("local  (%5d)[%s] : %s (%d) \n", m.Id, m.Question[0].Name, replyMsg.Answer[0].String(), replyMsg.Id)
+							} else {
+								log.Printf("failed (%5d)[%s] : %s (%d) \n", m.Id, m.Question[0].Name, replyMsg.String(), replyMsg.Id)
 
-						replyMsg.Unpack(reply.data)
-						replyMsg.Id = m.Id
+							}
+							data, _ := replyMsg.Pack()
+							udpListener.WriteToUDP(data, clientAddr)
+						} else {
+							toLocal := false
+							if isLocalHost != nil {
+								toLocal = isLocalHost(m.Question[0].Name)
+							}
 
-						data, _ := replyMsg.Pack()
-						udpListener.WriteToUDP(data, clientAddr)
-					} else {
-						toLocal := false
-						if isLocalHost != nil {
-							toLocal = isLocalHost(m.Question[0].Name)
-						}
-						go func(host string, senddata []byte, clientAddr *net.UDPAddr) {
 							var replyData []byte
 							var err error
 							if toLocal {
 								replyData, err = LocalQueryDNS(m)
+
 							} else {
-								replyData, err = sendFund(senddata, otherDNS)
+								replyData, err = sendFund(dnsData, otherDNS)
+							}
+							replyMsg := new(dns.Msg)
+							replyMsg.Unpack(replyData)
+							if len(replyMsg.Answer) > 0 {
+								log.Printf("remote (%5d)[%s] : %s (%d) \n", m.Id, m.Question[0].Name, replyMsg.Answer[0].String(), replyMsg.Id)
+							} else {
+								log.Printf("failed (%5d)[%s] : %s (%d) \n", m.Id, m.Question[0].Name, replyMsg.String(), replyMsg.Id)
 							}
 
 							if err != nil {
@@ -114,17 +126,19 @@ func ClientProxy(listenPort int, cmdChan chan string, isLocalHost func(host stri
 								log.Println("reply dns err:", err)
 								// return
 							}
-							RegistDNS(host, replyData)
-						}(m.Question[0].Name, buffer[:n], clientAddr)
+							if len(replyMsg.Answer) > 0 {
+								RegistDNS(m.Question[0].Name, replyData)
+							}
 
+						}
+					} else {
+						log.Println("no query !")
 					}
-				} else {
-					log.Println("no query !")
-				}
 
-			} else {
-				log.Println("not dns data jump")
-			}
+				} else {
+					log.Println("not dns data jump")
+				}
+			}(buffer[:n], clientAddr)
 		}
 
 	}

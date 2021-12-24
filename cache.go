@@ -7,7 +7,7 @@ import (
 
 var (
 	lock    = sync.RWMutex{}
-	Cachsed = make(map[string]Cache)
+	Cachsed = make(map[string]*Cache)
 )
 
 type Cache struct {
@@ -19,7 +19,7 @@ type Cache struct {
 func CleanCache() {
 	lock.Lock()
 	defer lock.Unlock()
-	Cachsed = make(map[string]Cache)
+	Cachsed = make(map[string]*Cache)
 }
 
 func RegistDNS(host string, replyDNS []byte) {
@@ -28,7 +28,7 @@ func RegistDNS(host string, replyDNS []byte) {
 	}
 	lock.Lock()
 	defer lock.Unlock()
-	c := Cache{
+	c := &Cache{
 		data:   replyDNS,
 		create: time.Now(),
 		// client: client,
@@ -36,7 +36,8 @@ func RegistDNS(host string, replyDNS []byte) {
 	Cachsed[host] = c
 }
 
-func FindCache(host string) (c Cache, found bool) {
+func FindCache(host string) (c *Cache, found bool) {
 	c, found = Cachsed[host]
+	// c.create.After(1 * )
 	return
 }
