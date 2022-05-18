@@ -78,9 +78,12 @@ func ClientProxy(listenPort int, cmdChan chan string, isLocalHost func(host stri
 			if checkreport(1, err) {
 				continue
 			}
+			nbuf := make([]byte, n)
+			copy(nbuf, buffer[:n])
+
 			go func(dnsData []byte, clientAddr *net.UDPAddr) {
 				m := new(dns.Msg)
-				if err := m.Unpack(buffer[:n]); err == nil {
+				if err := m.Unpack(nbuf); err == nil {
 					if len(m.Question) > 0 {
 						if reply, found := FindCache(m.Question[0].Name); found {
 							replyMsg := new(dns.Msg)
@@ -138,7 +141,7 @@ func ClientProxy(listenPort int, cmdChan chan string, isLocalHost func(host stri
 				} else {
 					log.Println("not dns data jump")
 				}
-			}(buffer[:n], clientAddr)
+			}(nbuf, clientAddr)
 		}
 
 	}
