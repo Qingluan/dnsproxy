@@ -38,6 +38,9 @@ func RegistDNS(host string, replyDNS []byte) {
 
 func FindCache(host string) (c *Cache, found bool) {
 	c, found = Cachsed[host]
+	if time.Since(c.create) > time.Minute {
+		found = false
+	}
 	// c.create.After(1 * )
 	return
 }

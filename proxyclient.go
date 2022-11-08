@@ -115,6 +115,7 @@ func ClientProxy(listenPort int, cmdChan chan string, isLocalHost func(host stri
 							replyMsg := new(dns.Msg)
 							replyMsg.Unpack(replyData)
 							if len(replyMsg.Answer) > 0 {
+
 								log.Printf("remote (%5d)[%s] : %s (%d) \n", m.Id, m.Question[0].Name, replyMsg.Answer[0].String(), replyMsg.Id)
 							} else {
 								log.Printf("failed (%5d)[%s] : %s (%d) \n", m.Id, m.Question[0].Name, replyMsg.String(), replyMsg.Id)
